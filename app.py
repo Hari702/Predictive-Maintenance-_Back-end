@@ -90,6 +90,30 @@ def process_data(new_data):
         "failure_type": failure_type,
         "maintenance_time": maintenance_time.strftime('%d-%m-%Y')
     }
+    
+# parameter_limits = {
+#     "Air temperature": {"min": 10, "max": 40},
+#     "Process temperature": {"min": 50, "max": 100},
+#     "Rotational speed": {"min": 500, "max": 1500},
+#     "Torque": {"min": 20, "max": 100},
+#     "Tool wear": {"min": 0, "max": 500},
+# }
+
+# airTempMin=200
+# airTempMax=300
+# processTempMin=200
+# processTempMax=300
+# rotationalSpeedMin=1000
+# roationalSpeedMax=2000
+# torqueMin=30
+# torqueMax=50
+# toolWearMin=15
+# toolWearMax=50
+    
+# def rule_based_maintenance(new_data):
+    
+    
+    
 
 # Load test data
 test_data = pd.read_csv('D:/Digiverz_Data_Engineering_and_science/Accelerator-Development/Notebook/dataset/realtime_data.csv')
@@ -104,9 +128,117 @@ def stream():
             response = process_data(new_data)
             yield f"data: {json.dumps(response)}\n\n"
             index += 1
-            time.sleep(5)  # Wait 30 seconds before sending the next row
+            time.sleep(10)  # Wait 30 seconds before sending the next row
 
     return Response(event_stream(), mimetype="text/event-stream")
+
+
+
+
+@app.route("/config",methods=['POST'])
+def get_config_data():
+    global config_data
+    config_data=request.json
+    print(config_data)
+    return jsonify(config_data)
+    
+
+def check_parameters(data):
+    alerts = []
+
+    airTempMin = config_data['air-temperature-min']
+    airTempMax=config_data['air-temperature-max']
+    processTempMin = config_data['process-temperature-min']
+    processTempMax = config_data['process-temperature-max']
+    rotationalSpeedMin=config_data['rotational-speed-min']
+    rotationalSpeedMax=config_data['rotational-speed-max']
+    torqueMin=config_data['torque-min']
+    torqueMax=config_data['torque-max']
+    toolWearMin=config_data['toolwear-min']
+    toolWearMax=config_data['toolwear-max']
+
+
+ 
+    if data[0] < airTempMin or data[0] > airTempMax:
+        alerts.append('Critical: Air temperature out of bound')
+    if data[1] < processTempMin or data[1] > processTempMax:
+        alerts.append('Critical: Process temperature out of bound')
+    if data[2] < rotationalSpeedMin or data[2] > rotationalSpeedMax:
+        alerts.append('Critical:Rotational speed out of bound')
+    if data[3] < torqueMin or data[3] > torqueMax:
+        alerts.append('Critical: Torque out of bound')
+    if data[4]< toolWearMin or data[4]>toolWearMax:
+        alerts.append('Critical: Tool wear out of bound')
+
+    # Process Temperature Check
+    # if data[1] < process_tempmin or data[1] > process_tempmax:
+    #     alerts.append('Warning: Process temperature is approaching critical limits')
+    # if process_temp < 200 or process_temp > 300:
+    #     alerts.append('Critical: Process temperature out of bounds!')
+
+    # # Rotational Speed Check
+    # if rotational_speed < 1100 or rotational_speed > 1900:
+    #     alerts.append('Warning: Rotational speed is approaching critical limits')
+    # if rotational_speed < 1000 or rotational_speed > 2000:
+    #     alerts.append('Critical: Rotational speed out of bounds!')
+
+    # # Torque Check
+    # if torque < 35 or torque > 45:
+    #     alerts.append('Warning: Torque is approaching critical limits')
+    # if torque < 30 or torque > 50:
+    #     alerts.append('Critical: Torque out of bounds!')
+
+    # # Tool Wear Check
+    # if tool_wear < 20 or tool_wear > 45:
+    #     alerts.append('Warning: Tool wear is approaching critical limits')
+    # if tool_wear < 15 or tool_wear > 50:
+    #     alerts.append('Critical: Tool wear out of bounds!')
+
+    return alerts
+
+def process_data_config(new_data):
+    timestamp = get_timestamp()
+    alerts= check_parameters(new_data)
+    # maintenance_time = timestamp + timedelta(days=days_for_maintenance)
+    # if(priority=="Low" & failure_type == "No Failure"){
+    #     maintenance_time=timestamp+timedelta(dayys)
+    # }
+    return {
+        "Air temperature":new_data[0],
+        "Process temperature":new_data[1],
+        "Rotational speed":new_data[2],
+        "Torque":new_data[3],
+        "Tool wear":new_data[4],
+        "DateTime":timestamp.strftime('%d-%m-%Y'),
+        "Reading time":timestamp.strftime('%H:%M:%S'),
+        "alerts":alerts
+    }
+
+@app.route('/streamConfig')
+def streamConfig():
+    def event_stream_another():
+        index = 0
+        while index < len(test_data):
+            row = test_data.iloc[index]
+            new_data = row[['Air_temperature', 'Process_temperature', 'Rotational_speed', 'Torque', 'Tool_wear']].tolist()
+            response = process_data_config(new_data)
+            yield f"data: {json.dumps(response)}\n\n"
+            index += 1
+            time.sleep(15)  # Wait 30 seconds before sending the next row
+
+    return Response(event_stream_another(), mimetype="text/event-stream")
+
+
+
+    
+
+
+
+
+
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
