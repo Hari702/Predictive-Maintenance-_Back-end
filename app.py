@@ -145,9 +145,10 @@ def get_config_data():
 
 def check_parameters(data):
     alerts = []
+    advisories=[]
 
-    airTempMin = config_data['air-temperature-min']
-    airTempMax=config_data['air-temperature-max']
+    # airTempMin = config_data['air-temperature-min']
+    # airTempMax=config_data['air-temperature-max']
     processTempMin = config_data['process-temperature-min']
     processTempMax = config_data['process-temperature-max']
     rotationalSpeedMin=config_data['rotational-speed-min']
@@ -159,16 +160,22 @@ def check_parameters(data):
 
 
  
-    if data[0] < airTempMin or data[0] > airTempMax:
-        alerts.append('Critical: Air temperature out of bound')
+    # if data[0] < airTempMin or data[0] > airTempMax:
+    #     alerts.append('Critical: Air temperature out of bound')
     if data[1] < processTempMin or data[1] > processTempMax:
-        alerts.append('Critical: Process temperature out of bound')
+        alerts.append('Critical: Process Temperature exceeds limits')
+        advisories.append('Check coolant flow and fans')
     if data[2] < rotationalSpeedMin or data[2] > rotationalSpeedMax:
-        alerts.append('Critical:Rotational speed out of bound')
+        alerts.append('Critical: Rotational Speed exceeds limits')
+        advisories.append('Check for bearing wear or belt slippage')
     if data[3] < torqueMin or data[3] > torqueMax:
-        alerts.append('Critical: Torque out of bound')
+        alerts.append('Critical: Torque exceeds limits')
+        advisories.append("Investigate increased load or clutch problems")
     if data[4]< toolWearMin or data[4]>toolWearMax:
-        alerts.append('Critical: Tool wear out of bound')
+        alerts.append('Critical: Tool Wear exceeds limits')
+        advisories.append('Schedule tool replacement to avoid product defects.')
+        
+    return alerts,advisories
 
     # Process Temperature Check
     # if data[1] < process_tempmin or data[1] > process_tempmax:
@@ -194,11 +201,11 @@ def check_parameters(data):
     # if tool_wear < 15 or tool_wear > 50:
     #     alerts.append('Critical: Tool wear out of bounds!')
 
-    return alerts
+    # return alerts
 
 def process_data_config(new_data):
     timestamp = get_timestamp()
-    alerts= check_parameters(new_data)
+    alerts,advisories= check_parameters(new_data)
     # maintenance_time = timestamp + timedelta(days=days_for_maintenance)
     # if(priority=="Low" & failure_type == "No Failure"){
     #     maintenance_time=timestamp+timedelta(dayys)
@@ -211,7 +218,8 @@ def process_data_config(new_data):
         "Tool wear":new_data[4],
         "DateTime":timestamp.strftime('%d-%m-%Y'),
         "Reading time":timestamp.strftime('%H:%M:%S'),
-        "alerts":alerts
+        "alerts":alerts,
+        'advisories':advisories
     }
 
 @app.route('/streamConfig')
